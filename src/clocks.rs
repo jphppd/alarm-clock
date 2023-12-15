@@ -119,8 +119,9 @@ where
                 elapsed_since_dawn: _,
             } => true,
             PhaseOfDay::SunRise {
+                elapsed_since_sunrise: _,
                 luminosity_at_sunrise: _,
-            } => false,
+            } => true,
         };
 
         if can_trigger_alarm_today {
@@ -136,6 +137,7 @@ where
                 let elapsed_since_sunrise = datetime.time - sunrise;
                 if elapsed_since_sunrise >= 0 {
                     self.phase_of_day = PhaseOfDay::SunRise {
+                        elapsed_since_sunrise: elapsed_since_sunrise as u8,
                         luminosity_at_sunrise: luminosity,
                     };
                 } else if let Some(dawn_duration) = self.dawn_duration {

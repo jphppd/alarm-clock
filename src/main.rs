@@ -70,6 +70,8 @@ const ALARM_WEEKEND_SUNRISE: Time = Time {
     minute: 10,
     second: None,
 };
+/// Ack the alarm (if not already done manually) after that time
+const ALARM_AUTO_ACK_MIN: u8 = 5;
 
 use crate::{
     clocks::{Clock, PhaseOfDay, Time},
@@ -146,6 +148,7 @@ impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
     /// Ack the alarm, if the conditions are met
     fn process_alarm(&mut self) {
         if let PhaseOfDay::SunRise {
+            elapsed_since_sunrise,
             luminosity_at_sunrise,
         } = self.clocks.phase_of_day
         {
@@ -156,6 +159,10 @@ impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
             // If light was off when the "sun rose" (the alarm was triggered),
             // light now means the user switched it on. We can ack the alarm.
             if !luminosity_at_sunrise && self.inputs.luminosity.value {
+                self.clocks.ack_sunrise();
+            }
+            // Ack automatically after a certain duration
+            if elapsed_since_sunrise > ALARM_AUTO_ACK_MIN {
                 self.clocks.ack_sunrise();
             }
         }
@@ -184,6 +191,7 @@ impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
             || matches!(
                 self.clocks.phase_of_day,
                 PhaseOfDay::SunRise {
+                    elapsed_since_sunrise: _,
                     luminosity_at_sunrise: _
                 }
             ) {
@@ -216,6 +224,7 @@ impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
             }),
             // Sunrise: be bright!
             PhaseOfDay::SunRise {
+                elapsed_since_sunrise: _,
                 luminosity_at_sunrise: _,
             } => Some(Color::sun(LED_STRIP_MAX_INTENSITY)),
             // Otherwise: switch off
@@ -229,6 +238,7 @@ impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
         if matches!(
             self.clocks.phase_of_day,
             PhaseOfDay::SunRise {
+                elapsed_since_sunrise: _,
                 luminosity_at_sunrise: _
             }
         ) {
@@ -282,11 +292,13 @@ impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
                         .ok();
                     }
                     PhaseOfDay::SunRise {
+                        elapsed_since_sunrise,
                         luminosity_at_sunrise,
                     } => {
                         ufmt::uwriteln!(
                             &mut self.serial_buffer,
-                            "SunRise lum {}",
+                            "SunRise since {} and lum {}",
+                            elapsed_since_sunrise,
                             luminosity_at_sunrise
                         )
                         .ok();

@@ -133,6 +133,8 @@ pub enum PhaseOfDay {
     /// Sunrise: the alarm is to be triggered during this phase,
     /// until it is acked and comes back to default.
     SunRise {
+        /// Number of minutes since sunrise.
+        elapsed_since_sunrise: u8,
         /// True when the luminosity of the environment was high
         /// during the phase transition.
         luminosity_at_sunrise: bool,
