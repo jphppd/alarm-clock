@@ -35,7 +35,8 @@ type LuminosityInput = arduino_hal::hal::port::PD3; // d3
 type ButtonInput = arduino_hal::hal::port::PD4; // d4
 type ProximityInput = arduino_hal::hal::port::PD6; // d6
 type BuzzerOutput = arduino_hal::hal::port::PD7; // d7
-type LedStripOutput = arduino_hal::hal::port::PB0; // d8
+type LedStripDataOutput = arduino_hal::hal::port::PB0; // d8
+type LedStripRelayOutput = arduino_hal::hal::port::PB1; // d9
 type DisplaySpiCsOutput = arduino_hal::hal::port::PB2; // d10
 type DisplaySpiMosiOutput = arduino_hal::hal::port::PB3; // d11
 type DisplaySpiClkOutput = arduino_hal::hal::port::PB5; // d13
@@ -200,26 +201,25 @@ impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
     /// Switch on/off the led strip
     fn process_led_strip(&mut self) {
         if let Some(forced_led_color) = self.forced_led_color {
-            self.outputs.led_strip.set_color(forced_led_color);
+            self.outputs.led_strip.set_color(Some(forced_led_color));
             return;
         }
         let color = match self.clocks.phase_of_day {
             // Between dawn and sunrise: ramp of intensity
             PhaseOfDay::Dawn {
                 elapsed_since_dawn: elapsed,
-            } => match self.clocks.dawn_duration {
-                Some(dawn_duration) => Color::sun(
+            } => self.clocks.dawn_duration.map(|dawn_duration| {
+                Color::sun(
                     ((elapsed as u16).saturating_mul(LED_STRIP_MAX_INTENSITY as u16)
                         / dawn_duration as u16) as u8,
-                ),
-                None => Color::sun(0x00),
-            },
+                )
+            }),
             // Sunrise: be bright!
             PhaseOfDay::SunRise {
                 luminosity_at_sunrise: _,
-            } => Color::sun(LED_STRIP_MAX_INTENSITY),
+            } => Some(Color::sun(LED_STRIP_MAX_INTENSITY)),
             // Otherwise: switch off
-            PhaseOfDay::Default { day_last_set: _ } => Color::sun(0x00),
+            PhaseOfDay::Default { day_last_set: _ } => None,
         };
         self.outputs.led_strip.set_color(color);
     }
@@ -373,7 +373,7 @@ fn main() -> ! {
             pins.d6,
             PROXIMITY_LOGICAL_LEVEL_HIGH,
         ),
-        outputs: outputs::Outputs::init(pins.d11, pins.d10, pins.d13, pins.d8, pins.d7),
+        outputs: outputs::Outputs::init(pins.d11, pins.d10, pins.d13, pins.d8, pins.d9, pins.d7),
         serial_buffer: Default::default(),
         forced_led_color: None,
     };

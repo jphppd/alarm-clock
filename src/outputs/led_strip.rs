@@ -1,37 +1,50 @@
 //! Control the LED strip.
 //! See the [interface](https://www.led-stuebchen.de/download/WS2815.pdf)
-use crate::LedStripOutput;
-use arduino_hal::port::{
-    mode::{Io, Output},
-    Pin, PinMode,
+use crate::{LedStripDataOutput, LedStripRelayOutput};
+use arduino_hal::{
+    delay_ms,
+    port::{
+        mode::{Io, Output},
+        Pin, PinMode,
+    },
 };
 use avr_device::asm::nop;
 use core::iter;
 
+const RELAY_ACTIVATION_TIME_MS: u16 = 5;
+
 /// Main structure for a LED strip with N LEDS
 pub struct LedStrip<const N: usize> {
     /// Pin connected to the digital input of the strip
-    data_out: Pin<Output, LedStripOutput>,
-    /// Current (actual) color
-    current: Color,
+    data_out: Pin<Output, LedStripDataOutput>,
+    /// Pin connected to the (power supply) relay
+    relay_out: Pin<Output, LedStripRelayOutput>,
+    /// Current (actual) color. When None, the relay will be switched low.
+    current: Option<Color>,
     /// Color to be set during the next rendering
-    buffer: Color,
+    buffer: Option<Color>,
 }
 
 impl<const N: usize> LedStrip<N> {
     /// Initialize the structure.
-    pub fn init<MODE: PinMode + Io>(data_out: Pin<MODE, LedStripOutput>) -> Self {
+    pub fn init<ModeData: PinMode + Io, ModeRelay: PinMode + Io>(
+        data_out: Pin<ModeData, LedStripDataOutput>,
+        relay_out: Pin<ModeRelay, LedStripRelayOutput>,
+    ) -> Self {
         let mut data_out = data_out.into_output();
         data_out.set_low();
+        let mut relay_out = relay_out.into_output();
+        relay_out.set_low();
         LedStrip {
             data_out,
+            relay_out,
             current: Default::default(),
             buffer: Default::default(),
         }
     }
 
     /// Set a specific color to the LED strip
-    pub fn set_color(&mut self, color: Color) {
+    pub fn set_color(&mut self, color: Option<Color>) {
         self.buffer = color;
     }
 
@@ -42,12 +55,22 @@ impl<const N: usize> LedStrip<N> {
             return;
         }
         self.current = self.buffer;
-        self.write_color();
+
+        match self.current {
+            Some(color) => {
+                if self.relay_out.is_set_low() {
+                    self.relay_out.set_high();
+                    delay_ms(RELAY_ACTIVATION_TIME_MS);
+                }
+                self.write_color(color);
+            }
+            None => self.relay_out.set_low(),
+        }
     }
 
     /// Write the same color to all LEDS
-    fn write_color(&mut self) {
-        let color_raw = self.current.to_bits();
+    fn write_color(&mut self, color: Color) {
+        let color_raw = color.to_bits();
         avr_device::interrupt::free(|_| {
             // Write twice as many LEDs as the real number, to reduce the risk
             // of having a failed LED because of timings (jitters, ...).
