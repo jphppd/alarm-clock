@@ -135,9 +135,6 @@ pub enum PhaseOfDay {
     SunRise {
         /// Number of minutes since sunrise.
         elapsed_since_sunrise: u8,
-        /// True when the luminosity of the environment was high
-        /// during the phase transition.
-        luminosity_at_sunrise: bool,
     },
 }
 

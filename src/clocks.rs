@@ -1,6 +1,9 @@
 //! Clocks, date and time management
 use self::{dcf77::Dcf77, rtc::Rtc};
-use crate::{Dcf77Input, ALARM_DAWN_DURATION_MINUTES, ALARM_WEEKEND_SUNRISE, ALARM_WEEK_SUNRISE};
+use crate::{
+    Dcf77Input, ALARM_AUTO_ACK_MIN, ALARM_DAWN_DURATION_MINUTES, ALARM_WEEKEND_SUNRISE,
+    ALARM_WEEK_SUNRISE,
+};
 use arduino_hal::port::{mode::Io, Pin};
 pub use datetime::{Date, Datetime, DayOfWeek, PhaseOfDay, Time};
 use embedded_hal::blocking::i2c;
@@ -60,12 +63,12 @@ where
     }
 
     /// Public interface to process all duties at each call.
-    pub fn update(&mut self, luminosity: bool) {
+    pub fn update(&mut self) {
         let dcf77 = self.process_dcf77();
         self.process_rtc(dcf77);
 
         if let Some(datetime) = self.datetime {
-            self.update_phase_of_day(datetime, luminosity)
+            self.update_phase_of_day(datetime)
         }
     }
 
@@ -108,7 +111,7 @@ where
     /// Determine if the phase of the day must be updated, that is,
     /// if the dawn or the sunrise has come (and the alarm process should
     /// be triggered).
-    fn update_phase_of_day(&mut self, datetime: Datetime, luminosity: bool) {
+    fn update_phase_of_day(&mut self, datetime: Datetime) {
         // Test if the alarm has already been triggered today or not,
         // to prevent multiple consecutive triggers despite an ack.
         let can_trigger_alarm_today = match self.phase_of_day {
@@ -120,7 +123,6 @@ where
             } => true,
             PhaseOfDay::SunRise {
                 elapsed_since_sunrise: _,
-                luminosity_at_sunrise: _,
             } => true,
         };
 
@@ -136,10 +138,11 @@ where
                 // Just compare it with the sunrise time
                 let elapsed_since_sunrise = datetime.time - sunrise;
                 if elapsed_since_sunrise >= 0 {
-                    self.phase_of_day = PhaseOfDay::SunRise {
-                        elapsed_since_sunrise: elapsed_since_sunrise as u8,
-                        luminosity_at_sunrise: luminosity,
-                    };
+                    if (elapsed_since_sunrise as u8) <= ALARM_AUTO_ACK_MIN {
+                        self.phase_of_day = PhaseOfDay::SunRise {
+                            elapsed_since_sunrise: elapsed_since_sunrise as u8,
+                        };
+                    }
                 } else if let Some(dawn_duration) = self.dawn_duration {
                     let elapsed_since_dawn = elapsed_since_sunrise + dawn_duration as i16;
                     if elapsed_since_dawn >= 0 {
