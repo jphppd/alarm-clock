@@ -11,7 +11,7 @@ use arduino_hal::{
 use avr_device::asm::nop;
 use core::iter;
 
-const RELAY_ACTIVATION_TIME_MS: u16 = 5;
+const RELAY_ACTIVATION_TIME_MS: u16 = 50;
 
 /// Main structure for a LED strip with N LEDS
 pub struct LedStrip<const N: usize> {
