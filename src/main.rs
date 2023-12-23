@@ -54,7 +54,7 @@ const BUZZER_LOGICAL_LEVEL_HIGH: bool = true;
 /// Number of individual leds on the strip
 const LED_STRIP_COUNT: usize = 180;
 /// Value of the brightness of the simulated day
-const LED_STRIP_MAX_INTENSITY: u8 = 0x77;
+const LED_STRIP_MAX_INTENSITY: u8 = 0x55;
 
 /// Duration of the dawn before the sunrise
 const ALARM_DAWN_DURATION_MINUTES: u8 = 20;
