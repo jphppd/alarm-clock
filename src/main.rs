@@ -85,6 +85,7 @@ use core::{
     sync::atomic::{self, Ordering},
 };
 use embedded_hal::blocking::i2c;
+use ufmt::uWrite;
 
 mod clocks;
 mod inputs;
@@ -109,6 +110,8 @@ where
     /// If set to Some (by a command), the LED strip will display this color,
     /// overwriting the nominal one
     forced_led_color: Option<Color>,
+    /// Debug dcf77 (print bits)
+    debug_dcf77: bool,
 }
 
 impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
@@ -130,6 +133,16 @@ impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
 
     /// Update all the outputs for the user.
     fn update_outputs(&mut self) {
+        if self.debug_dcf77 {
+            if let Some(bit) = self.clocks.last_dcf77_bit {
+                let bit = match bit {
+                    clocks::dcf77::Dcf77SignalVariant::High => '#',
+                    clocks::dcf77::Dcf77SignalVariant::Low => '_',
+                    clocks::dcf77::Dcf77SignalVariant::MinuteEnd => '\n',
+                };
+                self.serial_buffer.write_char(bit).ok();
+            }
+        }
         self.serial_buffer.flush();
         self.outputs.render();
     }
@@ -337,6 +350,11 @@ impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
                     self.clocks.ack_sunrise();
                     ufmt::uwriteln!(&mut self.serial_buffer, "Ack").ok();
                 }
+                Ok(Some(Command::DebugDcf77)) => {
+                    self.debug_dcf77 = !self.debug_dcf77;
+                    ufmt::uwriteln!(&mut self.serial_buffer, "Debug dcf77: {}", self.debug_dcf77)
+                        .ok();
+                }
                 Err(()) => {
                     ufmt::uwriteln!(&mut self.serial_buffer, "Bad command").ok();
                 }
@@ -375,6 +393,7 @@ fn main() -> ! {
         outputs: outputs::Outputs::init(pins.d11, pins.d10, pins.d13, pins.d8, pins.d9, pins.d7),
         serial_buffer: Default::default(),
         forced_led_color: None,
+        debug_dcf77: false,
     };
 
     {

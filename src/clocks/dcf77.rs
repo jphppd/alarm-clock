@@ -73,7 +73,7 @@ pub struct Dcf77 {
 
 impl Dcf77 {
     /// Main call
-    pub fn run(&mut self) -> Result<Option<Datetime>, WorkflowError> {
+    pub fn run(&mut self) -> Result<(Option<Dcf77SignalVariant>, Option<Datetime>), WorkflowError> {
         // polled_value becomes Some almost immediately after the boot
         if let Some((timer, polled_value)) = get_polled_values() {
             if let Some(bit) = self.process_new_polled_values(timer, polled_value)? {
@@ -83,15 +83,17 @@ impl Dcf77 {
                 self.signals.clear_up_to_first_minute_end();
 
                 // Decode the array of bits as a datetime (if possible).
-                return Ok(self
-                    .signals
-                    .get_proto()
-                    .map(Datetime::try_from)
-                    .transpose()?);
+                return Ok((
+                    Some(bit),
+                    self.signals
+                        .get_proto()
+                        .map(Datetime::try_from)
+                        .transpose()?,
+                ));
             }
         }
 
-        Ok(None)
+        Ok((None, None))
     }
 
     /// Detect if the container of the polled value holds a new one;

@@ -72,6 +72,8 @@ pub enum Command {
     QueryDawnDuration,
     /// Query last DCF77 update: ?77
     QueryLastDcf77Update,
+    /// Debug dcf77: !dbg77
+    DebugDcf77,
     /// Query the current phase of the day: ?phase
     QueryPhase,
     /// Query the time of sunrise (alarm), week or week-end: ?w\[ke\]
@@ -84,7 +86,7 @@ pub enum Command {
     SetLedColor(Color),
     /// Reset led color: !led
     ResetLedColor,
-    /// Acl alarm: !ack
+    /// Ack alarm: !ack
     AckAlarm,
 }
 
@@ -144,6 +146,7 @@ impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
             },
             Some(6) => match self.dequeue_to_array() {
                 [b'?', b'p', b'h', b'a', b's', b'e'] => Ok(Some(Command::QueryPhase)),
+                [b'!', b'd', b'b', b'g', b'7', b'7'] => Ok(Some(Command::DebugDcf77)),
                 _ => Err(()),
             },
             Some(8) => match self.dequeue_to_array() {

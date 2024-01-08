@@ -1,5 +1,8 @@
 //! Clocks, date and time management
-use self::{dcf77::Dcf77, rtc::Rtc};
+use self::{
+    dcf77::{Dcf77, Dcf77SignalVariant},
+    rtc::Rtc,
+};
 use crate::{Dcf77Input, ALARM_DAWN_DURATION_MINUTES, ALARM_WEEKEND_SUNRISE, ALARM_WEEK_SUNRISE};
 use arduino_hal::port::{mode::Io, Pin};
 pub use datetime::{Date, Datetime, DayOfWeek, PhaseOfDay, Time};
@@ -18,9 +21,11 @@ where
 {
     /// Current datetime
     pub datetime: Option<Datetime>,
-    /// Time of the last DCF77 update. In optimal
+    /// Time of the last DCF77 datetime update. In optimal
     /// conditions, an update is sent every minute.
     pub last_dcf77_update: Option<Datetime>,
+    /// Is "some" when a DCF77 bit was received during this loop
+    pub last_dcf77_bit: Option<Dcf77SignalVariant>,
     /// Phase of the day, used to determine if the alarm
     /// should be raised or not.
     pub phase_of_day: PhaseOfDay,
@@ -50,6 +55,7 @@ where
         Self {
             datetime: None,
             last_dcf77_update: Default::default(),
+            last_dcf77_bit: None,
             phase_of_day: PhaseOfDay::Default { day_last_set: None },
             dawn_duration: Some(ALARM_DAWN_DURATION_MINUTES),
             week_sunrise: Some(ALARM_WEEK_SUNRISE),
@@ -79,11 +85,13 @@ where
     /// Run dcf77 decoder, waiting for a new update.
     fn process_dcf77(&mut self) -> Option<Datetime> {
         match self.dcf77.run() {
-            Ok(None) => {
+            Ok((bit, None)) => {
+                self.last_dcf77_bit = bit;
                 // No update
                 None
             }
-            Ok(Some(dcf77_datetime)) => {
+            Ok((bit, Some(dcf77_datetime))) => {
+                self.last_dcf77_bit = bit;
                 // New datetime from dcf77
                 Some(dcf77_datetime)
             }
