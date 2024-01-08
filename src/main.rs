@@ -54,10 +54,10 @@ const BUZZER_LOGICAL_LEVEL_HIGH: bool = true;
 /// Number of individual leds on the strip
 const LED_STRIP_COUNT: usize = 180;
 /// Value of the brightness of the simulated day
-const LED_STRIP_MAX_INTENSITY: u8 = 20;
+const LED_STRIP_MAX_INTENSITY: u8 = 0x30;
 
 /// Duration of the dawn before the sunrise
-const ALARM_DAWN_DURATION_MINUTES: u8 = 20;
+const ALARM_DAWN_DURATION_MINUTES: u8 = 10;
 /// Time of the sunrise (alarm) during the week
 const ALARM_WEEK_SUNRISE: Time = Time {
     hour: 6,
@@ -209,7 +209,10 @@ impl<const WRITE_BUFFER_SIZE: usize, const READ_BUFFER_SIZE: usize>
             // Between dawn and sunrise: ramp of intensity
             PhaseOfDay::Dawn {
                 elapsed_since_dawn: elapsed,
-            } => self.clocks.dawn_duration.map(|_| Color::sun(elapsed + 1)),
+            } => self
+                .clocks
+                .dawn_duration
+                .map(|_| Color::sun(2 * elapsed + 1)),
             // Sunrise: be bright!
             PhaseOfDay::SunRise {
                 elapsed_since_sunrise: _,
