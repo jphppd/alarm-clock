@@ -36,7 +36,6 @@ type ButtonInput = arduino_hal::hal::port::PD4; // d4
 type ProximityInput = arduino_hal::hal::port::PD6; // d6
 type BuzzerOutput = arduino_hal::hal::port::PD7; // d7
 type LedStripDataOutput = arduino_hal::hal::port::PB0; // d8
-type LedStripRelayOutput = arduino_hal::hal::port::PB1; // d9
 type DisplaySpiCsOutput = arduino_hal::hal::port::PB2; // d10
 type DisplaySpiMosiOutput = arduino_hal::hal::port::PB3; // d11
 type DisplaySpiClkOutput = arduino_hal::hal::port::PB5; // d13
@@ -390,7 +389,7 @@ fn main() -> ! {
             pins.d6,
             PROXIMITY_LOGICAL_LEVEL_HIGH,
         ),
-        outputs: outputs::Outputs::init(pins.d11, pins.d10, pins.d13, pins.d8, pins.d9, pins.d7),
+        outputs: outputs::Outputs::init(pins.d11, pins.d10, pins.d13, pins.d8, pins.d7),
         serial_buffer: Default::default(),
         forced_led_color: None,
         debug_dcf77: false,

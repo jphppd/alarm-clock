@@ -1,7 +1,7 @@
 //! Outputs of the clock setup, for humans
 use crate::{
     BuzzerOutput, DisplaySpiClkOutput, DisplaySpiCsOutput, DisplaySpiMosiOutput,
-    LedStripDataOutput, LedStripRelayOutput, LED_STRIP_COUNT,
+    LedStripDataOutput, LED_STRIP_COUNT,
 };
 use arduino_hal::port::{mode::Io, Pin};
 pub use display::DisplayIntensity;
@@ -29,12 +29,11 @@ impl Outputs {
         cs: Pin<impl Io, DisplaySpiCsOutput>,
         clk: Pin<impl Io, DisplaySpiClkOutput>,
         led_strip_data: Pin<impl Io, LedStripDataOutput>,
-        led_strip_relay: Pin<impl Io, LedStripRelayOutput>,
         buzzer: Pin<impl Io, BuzzerOutput>,
     ) -> Self {
         Self {
             display: display::Display::init(data, cs, clk),
-            led_strip: led_strip::LedStrip::init(led_strip_data, led_strip_relay),
+            led_strip: led_strip::LedStrip::init(led_strip_data),
             buzzer: buzzer::Buzzer::init(buzzer),
         }
     }
